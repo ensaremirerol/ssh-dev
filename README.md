@@ -45,10 +45,20 @@ Image is based on Ubuntu and includes following tools by default:
 
    ```bash
     SSH_USER_PUBKEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3..."
+    HTTP_PROXY="" # Optional: Set HTTP proxy if needed
+    HTTPS_PROXY="" # Optional: Set HTTPS proxy if needed
+    NO_PROXY="" # Optional: Set no proxy if needed ex: "127.0.0.1,localhost"
    ```
 
    > **Note**: Password authentication is disabled for security reasons. You
    > must use SSH keys to access the container.
+
+   > **Note**: Some programs may not honor the proxy settings. You may need to
+   > set the proxy settings in the program's configuration files.
+
+   > **Note**: Proxy settings are one time use only. If you want to change them,
+   > you can do it by editing `~/.zshrc` and
+   > `/etc/apt/apt.conf.d/01-vendor-ubuntu` files in the container.
 
 3. Run the Docker container:
 

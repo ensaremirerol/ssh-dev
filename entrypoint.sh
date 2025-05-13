@@ -9,6 +9,9 @@ SSH_PORT=${SSH_PORT:-22}
 SSH_AUTHORIZED_KEYS_FILE="${SSH_USER_HOME}/.ssh/authorized_keys"
 SSH_CONFIG_FILE="${SSH_USER_HOME}/.ssh/config"
 DEBUG=${DEBUG:-"false"}
+HTTP_PROXY=${HTTP_PROXY:-""}
+HTTPS_PROXY=${HTTPS_PROXY:-""}
+NO_PROXY=${NO_PROXY:-""}
 
 # Functions
 log () {
@@ -30,6 +33,45 @@ validate_pubkey () {
         return 1
     fi
     return 0
+}
+
+set_proxies_for_user () {
+    # If proxy variables are already set in zshrc, skip
+    if grep -q "export http_proxy=" "${SSH_USER_HOME}/.zshrc" || \
+       grep -q "export https_proxy=" "${SSH_USER_HOME}/.zshrc" || \
+       grep -q "export no_proxy=" "${SSH_USER_HOME}/.zshrc"; then
+        log "Proxy variables already set in zshrc, skipping"
+        return
+    fi
+
+    local user="$1"
+    local http_proxy="$2"
+    local https_proxy="$3"
+    local no_proxy="$4"
+
+    # Check if http_proxy is set
+    if [ -n "$http_proxy" ]; then
+        log "Setting HTTP proxy for user $user"
+        echo "export http_proxy=$http_proxy" >> "${SSH_USER_HOME}/.zshrc"
+        echo "export HTTP_PROXY=$http_proxy" >> "${SSH_USER_HOME}/.zshrc"
+        # Apt
+        echo "Acquire::http::Proxy \"$http_proxy\";" >> /etc/apt/apt.conf.d/01-vendor-ubuntu
+    fi
+
+    # Check if https_proxy is set
+    if [ -n "$https_proxy" ]; then
+        log "Setting HTTPS proxy for user $user"
+        echo "export https_proxy=$https_proxy" >> "${SSH_USER_HOME}/.zshrc"
+        echo "export HTTPS_PROXY=$https_proxy" >> "${SSH_USER_HOME}/.zshrc"
+        # Apt
+        echo "Acquire::https::Proxy \"$https_proxy\";" >> /etc/apt/apt.conf.d/01-vendor-ubuntu
+    fi
+    # Check if no_proxy is set
+    if [ -n "$no_proxy" ]; then
+        log "Setting NO proxy for user $user"
+        echo "export no_proxy=$no_proxy" >> "${SSH_USER_HOME}/.zshrc"
+        echo "export NO_PROXY=$no_proxy" >> "${SSH_USER_HOME}/.zshrc"
+    fi
 }
 
 write_sshd_config () {
@@ -81,6 +123,7 @@ write_authorized_keys () {
     chmod 700 "${SSH_USER_HOME}/.ssh"
     echo "$pubkey" > "$SSH_AUTHORIZED_KEYS_FILE"
     chmod 600 "$SSH_AUTHORIZED_KEYS_FILE"
+    chown -R "${SSH_USER}:${SSH_USER}" "${SSH_USER_HOME}/.ssh"
 }
 
 if [ "$DEBUG" = "true" ]; then
@@ -97,5 +140,7 @@ else
 fi
 
 write_sshd_config "$SSH_USER" "$SSH_PORT"
+
+set_proxies_for_user "$SSH_USER" "$HTTP_PROXY" "$HTTPS_PROXY" "$NO_PROXY"
 
 exec "$@"
