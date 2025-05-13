@@ -1,4 +1,4 @@
-name: Docker Build Image - SHACL API
+name: Docker Build Image
 
 on:
   push:
